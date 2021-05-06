@@ -33,9 +33,12 @@ public:
     int num_options;
     bool selected;
     int selected_option;
+    bool reversed;
+    
 
     void selectNextOption();
     void selectPreviousOption();
+
 
 };
 
@@ -64,6 +67,7 @@ public:
 
     /* Main Drawing */
     void reset();
+    void menureset(Menu& menu);
     void drawMenu(Menu menu, bool is_selected);
     void print_centered(WINDOW* win, int start_row, string text);
     void drawMenuOptions(Menu& menu);
@@ -74,19 +78,23 @@ public:
     void selectPreviousMenu();
 
     /* Printing */
-    void printEntries(Database& database);
-    void printEntries(const vector<Team>& vT);
-    void printEntries(const Team& t);
+    void printEntries(WINDOW* win, Database& database);
+    void printEntries(WINDOW* win, const vector<Team>& vT);
+    void printEntries(WINDOW* win, const Team& t);
 
     /* Adding */
     void addEntry(Menu& menu);
-    void addMenu();
+    string getaddinput(Menu& menu);
 
     /* Deleting */
+    void deleteEntry(Menu& menu);
 
     /* Finding */
+    void findMenu(Menu& menu);
 
     /* Listing */
+    void listMenu(Menu& menu);
+
 
 };
 

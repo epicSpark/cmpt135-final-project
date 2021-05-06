@@ -44,15 +44,15 @@ void printEntries(const Team& t);
 string getFullName(const Database& database);
 string getShortName();
 vector<string> getDivList();
-string getPresident();
-string getCEO();
-vector<string> getPartners();
 string getLocation();
 int getYearFounded();
 float getNetWorth();
 
 // Delete:
 void deleteEntry(Database &database);
+void deleteByName(Database &database);
+void deleteByLocation(Database &database);
+void deleteByYearFounded(Database &database);
 
 // Listing:
 void listEntries(Database &database);

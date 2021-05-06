@@ -10,9 +10,12 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <iomanip>
 #include "tools.h"
 
 using namespace std;
+
+#define ctrl(x) (x & 0x1F)
 
 //////////////////////////ncurses///////////////////////
 
@@ -21,6 +24,7 @@ void start(){
     initscr();
     noecho();
     raw();
+    cbreak();
     curs_set(0);
 
     if (has_colors()){
@@ -33,30 +37,30 @@ void start(){
     int yMax, xMax;
     getmaxyx(stdscr, yMax, xMax);
 
-    WINDOW* win = newwin(yMax*3/4, xMax*3/4, yMax/8, xMax/8);
+    WINDOW* win = newwin(yMax*9/10, xMax*9/10, yMax/15, xMax/15);
     keypad(win, true);
     box(win,0,0);
 
-    string options1[] = {"Return"};
-    char options_trigger1[] = {'r'};
+    string options1[] = {"Add", "Return"};
+    char options_trigger1[] = {'a', 'r'};
 
-    string options2[] = {"Name", "Year", "Return"};
-    char options_trigger2[] = {'n', 'y', 'r'};
+    string options2[] = {"Name", "Location", "Year", "Return"};
+    char options_trigger2[] = {'n', 'l', 'y', 'r'};
 
     string options3[] = {"Name", "Game", "Location", "Date", "Return"};
     char options_trigger3[] = {'n', 'g', 'l', 'd', 'r'};
 
-    string options4[] = {"Name", "Location", "Net Worth", "Year", "Return"};
-    char options_trigger4[] = {'n', 'l', 'w', 'y', 'r'};
+    string options4[] = {"Reversed", "Name", "Location", "Net Worth", "Year", "Return"};
+    char options_trigger4[] = {ctrl('r'),'n', 'l', 'w', 'y', 'r'};
 
     string options5[] = {};
     char options_trigger5[] = {};
     
     Menu menus[5] = {
-        Menu("Add", 'a', options1, options_trigger1, 1),
-        Menu("Delete", 'd', options2, options_trigger2, 3), 
+        Menu("Add", 'a', options1, options_trigger1, 2),
+        Menu("Delete", 'd', options2, options_trigger2, 4), 
         Menu("Find", 'f', options3, options_trigger3, 5),
-        Menu("List", 'l', options4, options_trigger4, 5),
+        Menu("List", 'l', options4, options_trigger4, 6),
         Menu("Quit", 'q', options5, options_trigger5, 0)
     };
 
@@ -110,7 +114,7 @@ void askMenu(Database& database){
                 "-------------------\n\n";
 
         cout << "Enter the letter of your choice: ";
-
+        //input that determines which feature the user wants to use
         string input;
         cin >> input;
         cout << endl;
@@ -121,10 +125,6 @@ void askMenu(Database& database){
         } else if (input == "d"){
             deleteEntry(database);
         } else if (input == "l"){
-            // sort(database.begin(), database.end());
-            // for(Team t : database) {
-            //     printEntries(t);
-            // }
             listEntries(database);
         } else if (input == "q"){ 
             database.save_to_file("database.txt");
@@ -143,7 +143,7 @@ void printEntries(Database& database){
     database.sort_by_name();
     printEntries(database.get_database());
 }
-
+//generic print teams function
 void printEntries(const vector<Team>& vT){
     if (vT.empty()){
         cout << "There are not records to print!\n";
@@ -171,7 +171,7 @@ void printEntries(const Team& t) {
 
     cout << "Team location: " << t.get_location() << endl;
     cout << "Team founded date: " << t.get_dateFounded() << endl;
-    cout << "Team Net Worth: " << t.get_netWorth() << endl;
+    cout << "Team Net Worth (in millions): " << t.get_netWorth() << endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -180,9 +180,11 @@ void printEntries(const Team& t) {
 void addEntry(Database& database) {
     Team temp;
     cout << "So you want to add a team? " << endl;
-    cout << "If you would like to return to the main menu, please enter \"X\"." << endl;
+    cout << "If you would like to return to the main menu, please enter \"X\"";
+    cout << "unless indicated otherwise." << endl;
     string fullName = getFullName(database);
-    if(fullName != "x") {
+    //checks to see if user just wants to quit; used below as well
+    if(fullName != "x") { 
         temp.set_full(fullName);
     } else {
         return;
@@ -222,7 +224,7 @@ void addEntry(Database& database) {
     printEntries(database);
 
 }
-
+//retrieves full names from user
 string getFullName(const Database& database) {
     cout << "Please enter team name: ";
     cin.ignore(100, '\n');
@@ -232,7 +234,7 @@ string getFullName(const Database& database) {
     for(char ch : userInput) {
         s += tolower(ch);
     }
-    if(s == "x") {
+    if(s == "x") {//check for user immediate exit
         return "x";
     }
     bool isValid = false;
@@ -243,27 +245,23 @@ string getFullName(const Database& database) {
                 exists = true;
             }
         }
-        if(exists) {
+        if(exists) { //checks to make sure duplicate isnt added
             cout << "That team already exists. Try again." << endl;
-            cin >> userInput;
+            getline(cin, userInput);
         } else if (userInput == "") {
             cout << "No input was detected. Try again." << endl;
-            cin >> userInput;
+            getline(cin, userInput);
         } else {
             isValid = true;
         }
     }
-    // if(exists) {
-    //     getFullName(database);
-    // }
     return userInput;
 };
-
+//retrieve short name/abbreviation from user
 string getShortName() {
     cout << "Please enter your team's short name: ";
-    //cin.ignore(100, '\n');
     string userInput;
-    getline(cin, userInput);
+    cin >> userInput;
     string s = "";
     for(char ch : userInput) {
         s += tolower(ch);
@@ -273,25 +271,27 @@ string getShortName() {
     }
     return userInput;
 };
-
+//function to retrieve vector of games the team plays
 vector<string> getDivList() {
-    cout << "Which games does your team participate in? Enter the exact game title." << endl;
+    cout << "Which games does your team participate in? Enter the exact game index number." << endl;
     cout << "When you have finished entering your list, please enter 0 to indicate so." << endl << endl;;
     cout << "**If you'd like to return to the main menu, please enter \"-1\".**" << endl << endl;
     vector<string> gamesPlayed;
     vector<string> eligibleGames;
-    eligibleGames = {"Call of Duty", "CS:GO", "Fortnite", "League of Legends", "Overwatch", "Rainbow Six Siege", 
-                     "Rocket League", "Super Smash Bros.", "Valorant"};
+    eligibleGames = {"Call of Duty", "CS:GO", "Fortnite", "League of Legends", "Overwatch", 
+    "Rainbow Six Siege", "Rocket League", "Super Smash Bros.", "Valorant"};
     int userInput;
     cout << "Here are the eligible games: " << endl;
     for(int i = 0; i < eligibleGames.size(); i++) {
         cout << "(" << i+1 << ")" << " " << eligibleGames.at(i) << endl;
     }
     cin >> userInput;
+    //if user enters something other than int, program crashes (successfully)
     if(cin.fail()) {
         cout << "You have not read instructions properly. Program is aborting now." << endl;
         exit(EXIT_FAILURE);
     }
+    //statement to check if user wants to exit
     if(userInput == -1) {
         vector<string> empty = {};
         return empty;
@@ -317,7 +317,7 @@ vector<string> getDivList() {
                 }
             }
         }
-        if(!isEligible) {
+        if(!isEligible) { //checks to see if option is plausible
             if(userInput == -1) {
                 vector<string> empty = {};
                 return empty;
@@ -326,14 +326,16 @@ vector<string> getDivList() {
         }
         cin >> userInput;
     }
+    //sorts gamesPlayed vector for convenience
     sort(gamesPlayed.begin(), gamesPlayed.end());
     cout << "Ok. Here are your team's games played: " << endl;
+    //program repeats back what is inputted
     for(string s : gamesPlayed) {
         cout << s << endl;
     }
     return gamesPlayed;
 };
-
+//retrieves team headquarters
 string getLocation() {
     cout << "Please enter your team's region/country: ";
     cin.ignore(100, '\n');
@@ -365,21 +367,14 @@ int getYearFounded() {
     cout << "Please enter the year your team was founded: ";
     cout << "If you'd like to return to the main menu, please enter \"-1\"." << endl;
     int userInput;
-    //cin.ignore(100, '\n');
-    //cin.sync();
     cin >> userInput;
+    //if int isnt entered, user is prompted again.
     while (cin.fail()){
         cout << "Sorry, that's an invalid entry. Please Try Again." << endl;
         cin >> userInput;
     }
-    
-    // if(!isNum) {
-    //     getYearFounded();
-    // }
-
     int num = userInput;
     return num;
-
 };
 
 float getNetWorth() {
@@ -391,6 +386,7 @@ float getNetWorth() {
     }
     bool isNum = true;
     bool isDecimal = false;
+    //loop to check if the input is a num (decimal or int)
     for(int i = 0; i < userInput.length(); i++) {
         if(!isdigit(userInput.at(i))) {
             if(userInput.at(i) == '.' && !isDecimal) {
@@ -413,17 +409,53 @@ float getNetWorth() {
 ///////////////////////////////////////////////////////////////////////////////
 // Deleting 
 ///////////////////////////////////////////////////////////////////////////////
+
+const int MAXSETWIDTH = 30;
+//sub-main menu
 void deleteEntry(Database &database) {
     if (database.get_database().empty()){
         cout << "There are no records in the database!\n\n";
         return;
     }
+    while (true){
+        cout << "------Delete a Team by:------\n";
+        cout << "(N)ame of team.\n"
+                "(L)ocation of teams.\n"
+                "(Y)ear teams were founded.\n"
+                "--------------------------\n"
+                "\n(R)eturn to main menu\n\n";
+
+        cout << "Enter the letter of your choice: ";
+
+        string input;
+        cin >> input;
+        cout << "\n";
+        input = cmpt::clean(input);
+        cin.ignore(100, '\n');
+        if (input == "n"){
+            deleteByName(database);
+        } else if (input == "l"){
+            deleteByLocation(database);
+        } else if (input == "y"){
+            deleteByYearFounded(database);
+        } else if (input == "r"){ 
+            break;
+        } else {
+            cout << "Input was not valid! Try again!\n";
+        }
+        break;
+    }
+    return;
+}
+
+void deleteByName(Database &database) {
+    //first, teams within are listed
     cout << "Teams in database: \n";
     for(Team f : database.get_database()) {
         cout << f.get_full() << endl;
     }
-    cout << "Please enter the team name that you want to delete: ";
-    cin.ignore(100, '\n');
+    cout << "Please enter the team name that you want to delete; ";
+    cout << "Enter the exact name as it appears: ";
     string userInput;
     getline(cin, userInput);
     
@@ -439,7 +471,6 @@ void deleteEntry(Database &database) {
     }
     if(!exists) {
         cout << "That team doesn't exist. Please try again." << endl;
-        //deleteEntry(database);
         return;
     } else {
         vector<Team> temp = database.get_database();
@@ -449,7 +480,89 @@ void deleteEntry(Database &database) {
             cout << f.get_full() << endl;
         }
     }
-    return;
+}
+
+void deleteByLocation(Database &database) {
+    //teams are listed (like deleteByName fct)
+    cout << "Here are the teams, sorted by location: " << endl;
+    database.sort_by_location();
+    for(Team t : database.get_database()) {
+        int length = t.get_full().length();
+        cout << t.get_full() << setw(MAXSETWIDTH - length);
+        cout << " -    " << t.get_location() << endl; 
+    }
+    cout << endl << "Which country's teams would you like to delete? ";
+    string userInput;
+    getline(cin, userInput);
+    bool exists = false;
+    int index = 0;
+    int firstIndex = -1;
+    int lastIndex = -2;
+    vector<Team> temp = database.get_database();
+    //loop that allows program to delete all entries with specified location
+    for(Team t : temp) {
+        if(t.get_location() == userInput) {
+            if(!exists) {
+                firstIndex = index;
+                exists = true;
+            }
+        } else {
+            if(firstIndex != -1) {
+                lastIndex = index;
+                break;
+            }
+        }
+        index++;
+    }
+    temp.erase(temp.begin() + firstIndex, temp.begin() + lastIndex);
+    database.replaceVector(temp);
+    //reprint of remaining teams
+    for(Team t : database.get_database()) {
+        int length = t.get_full().length();
+        cout << t.get_full() << setw(MAXSETWIDTH - length);
+        cout << " -    " << t.get_location() << endl; 
+    }
+}
+
+void deleteByYearFounded(Database &database) {
+    cout << "Here are the teams, sorted by newest-oldest. " << endl;
+    database.sort_by_revyearFounded();
+    for(Team t : database.get_database()) {
+        int length = t.get_full().length();
+        cout << t.get_full() << setw(MAXSETWIDTH - length);
+        cout << " - Est. " << t.get_dateFounded() << endl; 
+    }
+    cout << endl << "Which year's teams would you like to delete? ";
+    int userInput;
+    cin >> userInput;
+    bool exists = false;
+    int index = 0;
+    int firstIndex = -1;
+    int lastIndex = -2;
+    vector<Team> temp = database.get_database();
+    //same loop that checks so it can delete all entries with specified date
+    for(Team t : temp) {
+        if(t.get_dateFounded() == userInput) {
+            if(!exists) {
+                firstIndex = index;
+                exists = true;
+            }
+        } else {
+            if(firstIndex != -1) {
+                lastIndex = index;
+                break;
+            }
+        }
+        index++;
+    }
+    temp.erase(temp.begin() + firstIndex, temp.begin() + lastIndex);
+    database.replaceVector(temp);
+    //reprints the revised list of teams in database
+    for(Team t : database.get_database()) {
+        int length = t.get_full().length();
+        cout << t.get_full() << setw(MAXSETWIDTH - length);
+        cout << " - Est. " << t.get_dateFounded() << endl; 
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -529,6 +642,8 @@ void listEntries(Database &database) {
         string input;
         cin >> input;
         cout << endl;
+        //after user chooses which field to sort by, they are
+        //asked if they want to sort in reverse.
         if (cmpt::clean(input) == "a"){
             cout << "Would you like your sort in reverse?" << endl;
             cout << "If \"Y\" isn't entered, your answer will be assumed as no: "; 
@@ -543,7 +658,6 @@ void listEntries(Database &database) {
             for(Team t : database.get_database()) {
                 cout << t.get_full() << endl;
             }
-            // database.replaceVector(temp);
             cout << endl;
         } else if (input == "l"){
             cout << "Would you like your sort in reverse?" << endl;
@@ -558,9 +672,10 @@ void listEntries(Database &database) {
                 database.sort_by_location();
             }
             for(Team t : database.get_database()) {
-                cout << t.get_full() << " (" << t.get_location() << ")" << endl;
+                int length = t.get_full().length();
+                cout << t.get_full() << setw(MAXSETWIDTH - length);
+                cout << " -    " << t.get_location() << endl; 
             }
-            // database.replaceVector(temp);
             cout << endl;
         } else if (input == "n"){
             cout << "Would you like your sort in reverse?" << endl;
@@ -575,9 +690,10 @@ void listEntries(Database &database) {
                 database.sort_by_netWorth();
             }
             for(Team t : database.get_database()) {
-                cout << "$" << t.get_netWorth() << " million (" << t.get_full() << ")" << endl;
+                int length = t.get_full().length();
+                cout << t.get_full() << setw(MAXSETWIDTH - length);
+                cout << " -  $" << t.get_netWorth() << " million\n"; 
             }
-            // database.replaceVector(temp);
             cout << endl;
         } else if (input == "y"){ 
             cout << "Would you like your sort in reverse?" << endl;
@@ -592,9 +708,10 @@ void listEntries(Database &database) {
                 database.sort_by_yearFounded();
             }
             for(Team t : database.get_database()) {
-                cout << t.get_full() << " (Est. " << t.get_dateFounded() << ")" << endl;
+                int length = t.get_full().length();
+                cout << t.get_full() << setw(MAXSETWIDTH - length);
+                cout << " -   Est. " << t.get_dateFounded() << endl; 
             }
-            // database.replaceVector(temp);
             cout << endl;
         } else if (input == "g"){ 
             break;
